@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌊 Viana: 海上冒险 - Legend of the Golden Hearts</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #000;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+canvas {
+  display: block;
+  position: absolute;
+  touch-action: none;
+  top: 0; left: 0;
+}
+
+/* ===== 主菜单 ===== */
+#mainMenu {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 100;
+  background: linear-gradient(180deg, #0a1628 0%, #1a3a5c 40%, #2d6a8f 70%, #4a90b8 100%);
+}
+
+#mainMenu::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle cx="50" cy="80" r="1" fill="white" opacity="0.8"/><circle cx="150" cy="40" r="1.5" fill="white" opacity="0.6"/><circle cx="100" cy="120" r="0.8" fill="white" opacity="0.9"/><circle cx="30" cy="150" r="1.2" fill="white" opacity="0.7"/><circle cx="170" cy="160" r="0.6" fill="white" opacity="0.5"/></svg>') repeat;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.menu-title {
+  font-size: clamp(2.5rem, 10vw, 6rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700, #ff8c00, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+  margin-bottom: 10px;
+  position: relative; z-index: 1;
+  letter-spacing: 6px;
+}
+
+.menu-subtitle {
+  font-size: clamp(0.9rem, 3vw, 1.5rem);
+  color: #aaddff;
+  margin-bottom: 60px;
+  position: relative; z-index: 1;
+  letter-spacing: 4px;
+  font-style: italic;
+}
+
+.menu-btn {
+  padding: 18px 70px;
+  font-size: clamp(1.1rem, 3vw, 1.6rem);
+  font-weight: 700;
+  border: 2px solid #ffd700;
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative; z-index: 1;
+  margin: 10px;
+  letter-spacing: 3px;
+  min-width: 300px;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), inset 0 0 40px rgba(255, 215, 0, 0.1);
+  transform: scale(1.05);
+}
+
+.menu-btn.secondary {
+  border-color: #4a90b8;
+  color: #4a90b8;
+  background: rgba(74, 144, 184, 0.1);
+}
+
+.menu-btn.secondary:hover {
+  background: rgba(74, 144, 184, 0.3);
+  box-shadow: 0 0 40px rgba(74, 144, 184, 0.6);
+}
+
+/* ===== 角色选择 ===== */
+#charSelect {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 100;
+  background: linear-gradient(180deg, #0a1628 0%, #1a3a5c 40%, #2d6a8f 70%, #4a90b8 100%);
+}
+
+.char-grid {
+  display: flex; gap: 40px; flex-wrap: wrap; justify-content: center;
+  margin: 30px 0;
+  position: relative; z-index: 1;
+}
+
+.char-card {
+  width: 200px; padding: 30px 25px;
+  border: 2px solid #334;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.char-card:hover {
+  border-color: #ffd700;
+  background: rgba(255,215,0,0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(255,215,0,0.3);
+}
+
+.char-card.selected {
+  border-color: #ffd700;
+  background: rgba(255,215,0,0.15);
+  box-shadow: 0 0 30px rgba(255,215,0,0.4);
+}
+
+.char-icon { font-size: 4rem; margin-bottom: 15px; }
+.char-name { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+.char-desc { font-size: 0.85rem; color: #8af; line-height: 1.6; }
+
+/* ===== 游戏 HUD ===== */
+#hud {
+  position: absolute; top: 0; left: 0; width: 100%; padding: 15px 25px;
+  display: none; z-index: 50;
+  justify-content: space-between; align-items: flex-start;
+  pointer-events: none;
+}
+
+.hud-left, .hud-right { display: flex; flex-direction: column; gap: 8px; }
+.hud-right { align-items: flex-end; }
+
+.hud-label {
+  font-size: 0.7rem; color: #667; text-transform: uppercase; letter-spacing: 2px;
+}
+
+.hud-value {
+  font-size: 1.3rem; font-weight: 700; color: #fff;
+}
+
+.health-bar {
+  width: 180px; height: 8px; background: #223; border-radius: 4px; overflow: hidden;
+}
+.health-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #ff0044, #ff6600, #00ff88);
+  transition: width 0.3s;
+}
+
+.gold-display {
+  font-size: 1.2rem; color: #ffd700; font-weight: 700;
+}
+
+.location-display {
+  font-size: 1rem; color: #4a90b8; font-weight: 600;
+}
+
+/* ===== 物品栏 ===== */
+#inventory {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: none; z-index: 50;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #445;
+  border-radius: 15px;
+  padding: 15px 25px;
+  backdrop-filter: blur(10px);
+}
+
+.inv-items {
+  display: flex; gap: 15px;
+}
+
+.inv-slot {
+  width: 50px; height: 50px;
+  border: 2px solid #556;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.inv-slot:hover, .inv-slot.active {
+  border-color: #ffd700;
+  background: rgba(255,215,0,0.15);
+}
+
+.inv-slot .count {
+  position: absolute; bottom: 2px; right: 5px;
+  font-size: 0.65rem; color: #aaa;
+}
+
+/* ===== 操作提示 ===== */
+.controls-hint {
+  position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+  color: #667; font-size: 0.85rem; z-index: 50;
+  letter-spacing: 2px;
+  text-align: center;
+  background: rgba(0,0,0,0.5);
+  padding: 10px 20px;
+  border-radius: 10px;
+}
+
+/* ===== 消息提示 ===== */
+#messageBox {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85);
+  border: 2px solid #ffd700;
+  border-radius: 15px;
+  padding: 30px 50px;
+  color: #fff;
+  font-size: 1.2rem;
+  z-index: 200;
+  display: none;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+/* ===== 暂停 ===== */
+#pauseOverlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: none; align-items: center; justify-content: center;
+  z-index: 200;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(5px);
+}
+
+.pause-content {
+  text-align: center; color: #fff;
+}
+
+.pause-content h2 {
+  font-size: 3rem; margin-bottom: 20px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== 小地图 ===== */
+#minimap {
+  position: absolute; bottom: 20px; right: 20px;
+  width: 150px; height: 150px;
+  border: 2px solid #445;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.6);
+  z-index: 50;
+  display: none;
+  overflow: hidden;
+}
+
+/* ===== 任务面板 ===== */
+#questPanel {
+  position: absolute; top: 60px; right: 20px;
+  width: 250px;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid #ffd700;
+  border-radius: 10px;
+  padding: 15px;
+  z-index: 50;
+  display: none;
+  color: #fff;
+}
+
+.quest-title {
+  font-size: 1rem; color: #ffd700; font-weight: 700; margin-bottom: 10px;
+}
+
+.quest-item {
+  font-size: 0.85rem; color: #aac; margin: 8px 0;
+  padding-left: 15px;
+  position: relative;
+}
+
+.quest-item::before {
+  content: '▸'; position: absolute; left: 0; color: #ffd700;
+}
+
+.quest-item.completed {
+  color: #00ff88;
+  text-decoration: line-through;
+}
+
+/* ===== 天气指示器 ===== */
+#weatherIndicator {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+  font-size: 1.5rem;
+  z-index: 50;
+  display: none;
+}
+
+/* ===== 技能图标 ===== */
+.skills-panel {
+  position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px;
+  z-index: 50;
+}
+
+.skill-btn {
+  width: 45px; height: 45px;
+  border: 2px solid #556;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.skill-btn:hover {
+  border-color: #ffd700;
+  background: rgba(255,215,0,0.2);
+}
+
+/* ===== 移动端触屏控制 ===== */
+#mobileControls {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 45vh;
+  z-index: 999;
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  #mobileControls { display: flex !important; }
+}
+#joystickArea {
+  position: absolute;
+  bottom: 20px; left: 20px;
+  width: 150px; height: 150px;
+  pointer-events: auto;
+}
+#joystickBase {
+  width: 150px; height: 150px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.3);
+  position: relative;
+}
+#joystickThumb {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  border: 2px solid rgba(255,255,255,0.7);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  transition: none;
+}
+.action-btn {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.4);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.action-btn:active, .action-btn.active {
+  background: rgba(255,255,255,0.5);
+}
+#btnAttack {
+  bottom: 40px; right: 20px;
+  width: 80px; height: 80px;
+  font-size: 28px;
+}
+#btnFish {
+  bottom: 140px; right: 30px;
+  width: 55px; height: 55px;
+  font-size: 22px;
+}
+#btnInteract {
+  bottom: 40px; right: 120px;
+  width: 55px; height: 55px;
+  font-size: 22px;
+}
+#btnWeapon {
+  bottom: 140px; right: 100px;
+  width: 55px; height: 55px;
+  font-size: 12px;
+}
+#btnPause {
+  top: 10px; right: 10px;
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  font-size: 18px;
+  z-index: 1000;
+}
+#mobileInfo {
+  position: fixed;
+  top: 10px; left: 10px;
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- ===== 主菜单 ===== -->
+<div id="mainMenu">
+  <div class="menu-title">VIANA</div>
+  <div class="menu-subtitle">海上冒险 · Legend of the Golden Hearts</div>
+  <button class="menu-btn" onclick="showCharSelect()">开始冒险</button>
+  <button class="menu-btn secondary" onclick="showHowToPlay()">玩法说明</button>
+</div>
+
+<!-- ===== 角色选择 ===== -->
+<div id="charSelect">
+  <h2 style="color:#ffd700;font-size:1.8rem;position:relative;z-index:1;">选择你的英雄</h2>
+  <div class="char-grid">
+    <div class="char-card" data-char="navigator" onclick="selectChar('navigator')">
+      <div class="char-icon">⚓</div>
+      <div class="char-name">航海家</div>
+      <div class="char-desc">擅长驾驶船只，速度更快<br>初始技能：航海术</div>
+    </div>
+    <div class="char-card" data-char="warrior" onclick="selectChar('warrior')">
+      <div class="char-icon">⚔️</div>
+      <div class="char-name">战士</div>
+      <div class="char-desc">战斗力强大，血量更高<br>初始技能：狂暴</div>
+    </div>
+    <div class="char-card" data-char="fisherman" onclick="selectChar('fisherman')">
+      <div class="char-icon">🎣</div>
+      <div class="char-name">渔夫</div>
+      <div class="char-desc">钓鱼效率翻倍，装备更多<br>初始技能：丰收</div>
+    </div>
+  </div>
+  <button class="menu-btn" onclick="startGame()" id="startBtn" style="display:none;">扬帆起航！</button>
+  <button class="menu-btn secondary" onclick="backToMenu()" style="margin-top:10px;">返回</button>
+</div>
+
+<!-- ===== 玩法说明 ===== -->
+<div id="howToPlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;background:rgba(0,0,0,0.9);padding:40px;">
+  <h2 style="color:#ffd700;font-size:2rem;margin-bottom:30px;">🌊 玩法说明</h2>
+  <div style="color:#aab;max-width:600px;line-height:2;font-size:1rem;text-align:left;">
+    <p>🖱️ <b>WASD/方向键</b> 移动角色</p>
+    <p>🚢 <b>靠近船只</b> 按 E 登船航行</p>
+    <p>🎣 <b>按 F</b> 开始钓鱼（海边或船上）</p>
+    <p>⚔️ <b>鼠标点击</b> 攻击怪物</p>
+    <p>🔫 <b>按 Q</b> 切换武器（刀/枪）</p>
+    <p>🏝️ <b>靠近岛屿</b> 按 E 登陆探险</p>
+    <p>💰 收集金币购买装备</p>
+    <p>🐟 钓鱼获得鱼类和宝藏</p>
+    <p>👹 打败海怪获得稀有宝物</p>
+    <p>⏸️ 按 ESC 暂停游戏</p>
+  </div>
+  <button class="menu-btn" onclick="backFromHowToPlay()" style="margin-top:30px;">知道了！</button>
+</div>
+
+<!-- ===== HUD ===== -->
+<div id="hud">
+  <div class="hud-left">
+    <span class="hud-label">生命值</span>
+    <div class="health-bar"><div class="health-fill" id="healthFill"></div></div>
+    <span class="location-display" id="locationDisplay">🌊 开阔海域</span>
+  </div>
+  <div class="hud-right">
+    <span class="hud-label">金币</span>
+    <span class="gold-display" id="goldDisplay">💰 0</span>
+  </div>
+</div>
+
+<!-- ===== 物品栏 ===== -->
+<div id="inventory">
+  <div class="inv-items" id="invSlots"></div>
+</div>
+
+<!-- ===== 操作提示 ===== -->
+<div class="controls-hint" id="controlsHint">
+  WASD 移动 · E 互动 · F 钓鱼 · Q 切换武器 · 鼠标点击攻击 · ESC 暂停
+</div>
+
+<!-- ===== 天气 ===== -->
+<div id="weatherIndicator">☀️</div>
+
+<!-- ===== 小地图 ===== -->
+<canvas id="minimap"></canvas>
+
+<!-- ===== 任务面板 ===== -->
+<div id="questPanel">
+  <div class="quest-title">📜 当前任务</div>
+  <div id="questList"></div>
+</div>
+
+<!-- ===== 技能面板 ===== -->
+<div class="skills-panel" id="skillsPanel">
+  <div class="skill-btn" onclick="useSkill('attack')" title="攻击">⚔️</div>
+  <div class="skill-btn" onclick="useSkill('defend')" title="防御">🛡️</div>
+  <div class="skill-btn" onclick="useSkill('speed')" title="加速">💨</div>
+  <div class="skill-btn" onclick="useSkill('heal')" title="治疗">❤️</div>
+</div>
+
+<!-- ===== 消息 ===== -->
+<div id="messageBox"></div>
+
+<!-- ===== 暂停 ===== -->
+<div id="pauseOverlay">
+  <div class="pause-content">
+    <h2>⏸ 暂停</h2>
+    <button class="menu-btn" onclick="resumeGame()">继续游戏</button>
+    <button class="menu-btn secondary" onclick="quitToMenu()" style="margin-top:10px;">退出到主菜单</button>
+  </div>
+</div>
+
+
+
+<script>
+// ========================
+//  VIANA: 海上冒险
+// ========================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap');
+const minimapCtx = minimapCanvas.getContext('2d');
+
+// ===== 画布尺寸 =====
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  minimapCanvas.width = 150;
+  minimapCanvas.height = 150;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ===== 音频系统 =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playSound(type) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+
+  switch(type) {
+    case 'splash':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, t);
+      osc.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t); osc.stop(t + 0.3);
+      break;
+    case 'sword':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(600, t);
+      osc.frequency.exponentialRampToValueAtTime(200, t + 0.15);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      osc.start(t); osc.stop(t + 0.15);
+      break;
+    case 'gun':
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(50, t + 0.2);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t); osc.stop(t + 0.2);
+      break;
+    case 'coin':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, t);
+      osc.frequency.exponentialRampToValueAtTime(1200, t + 0.1);
+      gain.gain.setValueAtTime(0.08, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      osc.start(t); osc.stop(t + 0.15);
+      break;
+    case 'fish':
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400, t);
+      osc.frequency.exponentialRampToValueAtTime(800, t + 0.2);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.start(t); osc.stop(t + 0.25);
+      break;
+    case 'monster':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(100, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.start(t); osc.stop(t + 0.5);
+      break;
+  }
+}
+
+// ===== 游戏状态 =====
+let gameState = 'menu';
+let selectedChar = null;
+let score = 0;
+let gold = 0;
+let gameTime = 0;
+let weather = 'sunny';
+let weatherTimer = 0;
+
+// ===== 世界地图 =====
+const WORLD_WIDTH = 5000;
+const WORLD_HEIGHT = 5000;
+
+// ===== 玩家 =====
+let player = {
+  x: WORLD_WIDTH / 2,
+  y: WORLD_HEIGHT / 2,
+  speed: 4,
+  health: 100,
+  maxHealth: 100,
+  weapon: 'sword',
+  inventory: [],
+  onBoat: false,
+  boat: null,
+  onIsland: false,
+  island: null,
+  facing: 'down',
+  animFrame: 0,
+  animTimer: 0
+};
+
+// ===== 船只 =====
+let boats = [];
+const BOAT_TYPES = [
+  { emoji: '⛵', name: '帆船', speed: 6, capacity: 2 },
+  { emoji: '🚢', name: '轮船', speed: 4, capacity: 4 },
+  { emoji: '🛶', name: '独木舟', speed: 3, capacity: 1 }
+];
+
+// ===== 岛屿 =====
+let islands = [];
+const ISLAND_TYPES = [
+  { emoji: '🏝️', name: '热带岛屿', resources: ['wood', 'fruit'], danger: 1 },
+  { emoji: '🌋', name: '火山岛', resources: ['gem', 'ore'], danger: 3 },
+  { emoji: '🏰', name: '城堡岛', resources: ['treasure', 'weapon'], danger: 2 }
+];
+
+// ===== 海洋生物 =====
+let seaCreatures = [];
+const CREATURE_TYPES = [
+  { emoji: '🐟', name: '鱼', speed: 2, value: 10, hostile: false },
+  { emoji: '🐠', name: '热带鱼', speed: 3, value: 15, hostile: false },
+  { emoji: '🦈', name: '鲨鱼', speed: 4, value: 50, hostile: true },
+  { emoji: '🐙', name: '章鱼', speed: 2, value: 30, hostile: true },
+  { emoji: '🐋', name: '鲸鱼', speed: 1, value: 100, hostile: false },
+  { emoji: '🦑', name: '鱿鱼', speed: 3, value: 25, hostile: true },
+  { emoji: '🐢', name: '海龟', speed: 1, value: 20, hostile: false },
+  { emoji: '🦀', name: '螃蟹', speed: 2, value: 15, hostile: false }
+];
+
+// ===== 怪物 =====
+let monsters = [];
+const MONSTER_TYPES = [
+  { emoji: '👹', name: '海怪', health: 50, damage: 8, value: 200, speed: 2 },
+  { emoji: '🐉', name: '海龙', health: 100, damage: 15, value: 500, speed: 3 },
+  { emoji: '👻', name: '幽灵船', health: 80, damage: 12, value: 300, speed: 2.5 },
+  { emoji: '🦑', name: '巨型鱿鱼', health: 60, damage: 18, value: 250, speed: 2 }
+];
+
+// ===== 宝箱 =====
+let treasures = [];
+
+// ===== 钓鱼系统 =====
+let fishing = {
+  active: false,
+  timer: 0,
+  maxTime: 3,
+  success: false,
+  catch: null
+};
+
+// ===== 粒子系统 =====
+let particles = [];
+
+class Particle {
+  constructor(x, y, color, speed, life, size) {
+    this.x = x; this.y = y;
+    this.color = color;
+    this.angle = Math.random() * Math.PI * 2;
+    this.speed = speed * (0.5 + Math.random() * 0.5);
+    this.vx = Math.cos(this.angle) * this.speed;
+    this.vy = Math.sin(this.angle) * this.speed;
+    this.life = life || 1;
+    this.maxLife = this.life;
+    this.size = size || Math.random() * 3 + 1;
+  }
+  update(dt) {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.life -= dt;
+  }
+  draw(ctx, camX, camY) {
+    const alpha = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x - camX, this.y - camY, this.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spawnParticles(x, y, color, count = 10, speed = 3, life = 0.8) {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, color, speed, life));
+  }
+}
+
+// ===== 海浪 =====
+class Wave {
+  constructor() {
+    this.x = Math.random() * WORLD_WIDTH;
+    this.y = Math.random() * WORLD_HEIGHT;
+    this.size = Math.random() * 20 + 10;
+    this.speed = Math.random() * 0.5 + 0.2;
+    this.phase = Math.random() * Math.PI * 2;
+  }
+  update(dt) {
+    this.phase += dt * this.speed;
+  }
+  draw(ctx, camX, camY) {
+    const screenX = this.x - camX;
+    const screenY = this.y - camY + Math.sin(this.phase) * 5;
+    
+    if (screenX < -50 || screenX > canvas.width + 50 || 
+        screenY < -50 || screenY > canvas.height + 50) return;
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+let waves = [];
+for (let i = 0; i < 100; i++) waves.push(new Wave());
+
+// ===== 云朵 =====
+class Cloud {
+  constructor() {
+    this.x = Math.random() * WORLD_WIDTH;
+    this.y = Math.random() * 500;
+    this.width = Math.random() * 100 + 50;
+    this.height = Math.random() * 40 + 20;
+    this.speed = Math.random() * 0.3 + 0.1;
+  }
+  update(dt) {
+    this.x += this.speed;
+    if (this.x > WORLD_WIDTH + 100) this.x = -100;
+  }
+  draw(ctx, camX, camY) {
+    const screenX = this.x - camX;
+    const screenY = this.y - camY;
+    
+    if (screenX < -200 || screenX > canvas.width + 200) return;
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(screenX, screenY, this.width, this.height, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+let clouds = [];
+for (let i = 0; i < 20; i++) clouds.push(new Cloud());
+
+// ===== 初始化世界 =====
+function initWorld() {
+  boats = [];
+  islands = [];
+  seaCreatures = [];
+  monsters = [];
+  treasures = [];
+
+  // 生成船只
+  for (let i = 0; i < 8; i++) {
+    const type = BOAT_TYPES[Math.floor(Math.random() * BOAT_TYPES.length)];
+    boats.push({
+      x: Math.random() * WORLD_WIDTH,
+      y: Math.random() * WORLD_HEIGHT,
+      type: type,
+      emoji: type.emoji,
+      speed: type.speed,
+      angle: Math.random() * Math.PI * 2,
+      moveTimer: Math.random() * 100
+    });
+  }
+
+  // 生成岛屿
+  for (let i = 0; i < 12; i++) {
+    const type = ISLAND_TYPES[Math.floor(Math.random() * ISLAND_TYPES.length)];
+    islands.push({
+      x: Math.random() * WORLD_WIDTH,
+      y: Math.random() * WORLD_HEIGHT,
+      type: type,
+      emoji: type.emoji,
+      radius: 80 + Math.random() * 40,
+      explored: false,
+      resources: [...type.resources]
+    });
+  }
+
+  // 生成海洋生物
+  for (let i = 0; i < 50; i++) {
+    const type = CREATURE_TYPES[Math.floor(Math.random() * CREATURE_TYPES.length)];
+    seaCreatures.push({
+      x: Math.random() * WORLD_WIDTH,
+      y: Math.random() * WORLD_HEIGHT,
+      type: type,
+      emoji: type.emoji,
+      speed: type.speed,
+      angle: Math.random() * Math.PI * 2,
+      health: 20,
+      maxHealth: 20,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  // 生成怪物
+  for (let i = 0; i < 15; i++) {
+    const type = MONSTER_TYPES[Math.floor(Math.random() * MONSTER_TYPES.length)];
+    monsters.push({
+      x: Math.random() * WORLD_WIDTH,
+      y: Math.random() * WORLD_HEIGHT,
+      type: type,
+      emoji: type.emoji,
+      health: type.health,
+      maxHealth: type.health,
+      damage: type.damage,
+      value: type.value,
+      speed: type.speed,
+      angle: Math.random() * Math.PI * 2,
+      phase: Math.random() * Math.PI * 2,
+      hostile: true
+    });
+  }
+
+  // 生成宝箱
+  for (let i = 0; i < 20; i++) {
+    treasures.push({
+      x: Math.random() * WORLD_WIDTH,
+      y: Math.random() * WORLD_HEIGHT,
+      emoji: '📦',
+      opened: false,
+      value: Math.floor(Math.random() * 100) + 50
+    });
+  }
+}
+
+// ===== 游戏逻辑 =====
+function updatePlayer(dt) {
+  if (player.onBoat) {
+    player.x += Math.cos(player.boat.angle) * player.boat.speed;
+    player.y += Math.sin(player.boat.angle) * player.boat.speed;
+  } else {
+    let dx = 0, dy = 0;
+    
+    if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
+    if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
+    if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
+    if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
+    
+    if (dx !== 0 || dy !== 0) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      dx /= len;
+      dy /= len;
+      
+      player.x += dx * player.speed;
+      player.y += dy * player.speed;
+      
+      // 更新朝向
+      if (Math.abs(dx) > Math.abs(dy)) {
+        player.facing = dx > 0 ? 'right' : 'left';
+      } else {
+        player.facing = dy > 0 ? 'down' : 'up';
+      }
+      
+      // 动画
+      player.animTimer += dt;
+      if (player.animTimer > 0.2) {
+        player.animFrame = (player.animFrame + 1) % 4;
+        player.animTimer = 0;
+      }
+    }
+  }
+  
+  // 边界限制
+  player.x = Math.max(50, Math.min(WORLD_WIDTH - 50, player.x));
+  player.y = Math.max(50, Math.min(WORLD_HEIGHT - 50, player.y));
+  
+  // 检查互动
+  checkInteractions();
+  
+  // 更新天气
+  weatherTimer += dt;
+  if (weatherTimer > 60) {
+    weatherTimer = 0;
+    const weathers = ['sunny', 'cloudy', 'rainy', 'storm'];
+    weather = weathers[Math.floor(Math.random() * weathers.length)];
+    updateWeatherIndicator();
+  }
+}
+
+function checkInteractions() {
+  // 检查船只
+  if (!player.onBoat) {
+    for (const boat of boats) {
+      const dx = player.x - boat.x;
+      const dy = player.y - boat.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 80) {
+        showMessage('按 E 登船');
+        if (keys['KeyE']) {
+          player.onBoat = true;
+          player.boat = boat;
+          playSound('splash');
+          spawnParticles(player.x, player.y, '#4a90b8', 15, 3, 0.5);
+        }
+        break;
+      }
+    }
+  }
+  
+  // 检查岛屿
+  if (!player.onIsland) {
+    for (const island of islands) {
+      const dx = player.x - island.x;
+      const dy = player.y - island.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < island.radius) {
+        showMessage('按 E 登陆');
+        if (keys['KeyE']) {
+          player.onIsland = true;
+          player.island = island;
+          island.explored = true;
+          playSound('splash');
+          spawnParticles(player.x, player.y, '#228B22', 20, 4, 0.8);
+          
+          // 获得岛屿资源
+          const resource = island.resources[Math.floor(Math.random() * island.resources.length)];
+          const values = { wood: 20, fruit: 15, gem: 50, ore: 30, treasure: 100, weapon: 40 };
+          gold += values[resource] || 20;
+          showMessage(`发现 ${resource}! +${values[resource] || 20} 金币`);
+          playSound('coin');
+        }
+        break;
+      }
+    }
+  }
+  
+  // 检查宝箱
+  for (const treasure of treasures) {
+    if (treasure.opened) continue;
+    
+    const dx = player.x - treasure.x;
+    const dy = player.y - treasure.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 50) {
+      treasure.opened = true;
+      gold += treasure.value;
+      score += treasure.value;
+      playSound('coin');
+      spawnParticles(treasure.x, treasure.y, '#ffd700', 30, 5, 1);
+      showMessage(`发现宝箱! +${treasure.value} 金币`);
+    }
+  }
+}
+
+function updateSeaCreatures(dt) {
+  for (const creature of seaCreatures) {
+    creature.phase += dt * 2;
+    creature.x += Math.cos(creature.angle) * creature.speed;
+    creature.y += Math.sin(creature.angle) * creature.speed;
+    
+    // 随机改变方向
+    if (Math.random() < 0.01) {
+      creature.angle += (Math.random() - 0.5) * Math.PI;
+    }
+    
+    // 边界环绕
+    if (creature.x < 0) creature.x = WORLD_WIDTH;
+    if (creature.x > WORLD_WIDTH) creature.x = 0;
+    if (creature.y < 0) creature.y = WORLD_HEIGHT;
+    if (creature.y > WORLD_HEIGHT) creature.y = 0;
+  }
+}
+
+function updateMonsters(dt) {
+  for (const monster of monsters) {
+    if (!monster.hostile) continue;
+    
+    monster.phase += dt * 2;
+    
+    // 追踪玩家
+    const dx = player.x - monster.x;
+    const dy = player.y - monster.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 300) {
+      monster.angle = Math.atan2(dy, dx);
+      monster.x += Math.cos(monster.angle) * monster.speed;
+      monster.y += Math.sin(monster.angle) * monster.speed;
+      
+      // 攻击玩家
+      if (dist < 60 && monster.attackTimer <= 0) {
+        monster.attackTimer = monster.attackDelay || 2;
+        player.health -= monster.damage;
+        spawnParticles(player.x, player.y, '#ff0000', 5, 3, 0.5);
+        playSound('hit');
+        if (player.health <= 0) {
+          gameOver();
+        }
+      }
+    } else {
+      // 巡逻
+      if (Math.random() < 0.02) {
+        monster.angle += (Math.random() - 0.5) * Math.PI;
+      }
+      monster.x += Math.cos(monster.angle) * monster.speed * 0.5;
+      monster.y += Math.sin(monster.angle) * monster.speed * 0.5;
+    }
+    
+    // 边界环绕
+    if (monster.x < 0) monster.x = WORLD_WIDTH;
+    if (monster.x > WORLD_WIDTH) monster.x = 0;
+    if (monster.y < 0) monster.y = WORLD_HEIGHT;
+    if (monster.y > WORLD_HEIGHT) monster.y = 0;
+  }
+}
+
+function updateBoats(dt) {
+  for (const boat of boats) {
+    boat.moveTimer += dt;
+    
+    if (boat.moveTimer > 5) {
+      boat.moveTimer = 0;
+      boat.angle += (Math.random() - 0.5) * Math.PI;
+    }
+    
+    boat.x += Math.cos(boat.angle) * boat.speed * 0.3;
+    boat.y += Math.sin(boat.angle) * boat.speed * 0.3;
+    
+    // 边界环绕
+    if (boat.x < 0) boat.x = WORLD_WIDTH;
+    if (boat.x > WORLD_WIDTH) boat.x = 0;
+    if (boat.y < 0) boat.y = WORLD_HEIGHT;
+    if (boat.y > WORLD_HEIGHT) boat.y = 0;
+  }
+}
+
+function updateFishing(dt) {
+  if (!fishing.active) return;
+  
+  fishing.timer += dt;
+  
+  if (fishing.timer >= fishing.maxTime) {
+    fishing.success = Math.random() < 0.7;
+    fishing.active = false;
+    
+    if (fishing.success) {
+      const fishTypes = [
+        { emoji: '🐟', name: '小鱼', value: 10 },
+        { emoji: '🐠', name: '热带鱼', value: 20 },
+        { emoji: '🐡', name: '河豚', value: 30 },
+        { emoji: '🦞', name: '龙虾', value: 40 },
+        { emoji: '🦑', name: '鱿鱼', value: 50 }
+      ];
+      fishing.catch = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+      gold += fishing.catch.value;
+      score += fishing.catch.value;
+      showMessage(`钓到 ${fishing.catch.name}! +${fishing.catch.value} 金币`);
+      playSound('fish');
+    } else {
+      showMessage('鱼跑了...');
+    }
+    
+    // 重置
+    setTimeout(() => {
+      fishing.timer = 0;
+      fishing.success = false;
+      fishing.catch = null;
+    }, 1000);
+  }
+}
+
+// ===== 输入处理 =====
+let keys = {};
+
+document.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  
+  if (e.code === 'Escape') {
+    if (gameState === 'playing') pauseGame();
+    else if (gameState === 'paused') resumeGame();
+  }
+  
+  // 钓鱼
+  if (e.code === 'KeyF' && !fishing.active && gameState === 'playing') {
+    startFishing();
+  }
+  
+  // 切换武器
+  if (e.code === 'KeyQ' && gameState === 'playing') {
+    player.weapon = player.weapon === 'sword' ? 'gun' : 'sword';
+    showMessage(`切换武器: ${player.weapon === 'sword' ? '🗡️ 刀' : '🔫 枪'}`);
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+});
+
+// 鼠标点击攻击
+canvas.addEventListener('click', (e) => {
+  if (gameState !== 'playing') return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  
+  // 转换为世界坐标
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+  const worldX = mouseX + camX;
+  const worldY = mouseY + camY;
+  
+  // 攻击怪物
+  for (let i = monsters.length - 1; i >= 0; i--) {
+    const monster = monsters[i];
+    const dx = worldX - monster.x;
+    const dy = worldY - monster.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 80) {
+      const damage = player.weapon === 'sword' ? 15 : 25;
+      monster.health -= damage;
+      playSound(player.weapon === 'sword' ? 'sword' : 'gun');
+      spawnParticles(monster.x, monster.y, '#ff4444', 10, 3, 0.5);
+      
+      if (monster.health <= 0) {
+        gold += monster.value;
+        score += monster.value;
+        playSound('monster');
+        spawnParticles(monster.x, monster.y, '#ffd700', 30, 6, 1.2);
+        showMessage(`击败 ${monster.type.name}! +${monster.value} 金币`);
+        
+        // 掉落宝物
+        if (Math.random() < 0.3) {
+          treasures.push({
+            x: monster.x,
+            y: monster.y,
+            emoji: '📦',
+            opened: false,
+            value: Math.floor(Math.random() * 100) + 50
+          });
+        }
+        
+        monsters.splice(i, 1);
+      }
+      break;
+    }
+  }
+});
+
+function startFishing() {
+  fishing.active = true;
+  fishing.timer = 0;
+  showMessage('钓鱼中...');
+  playSound('splash');
+}
+
+// ===== 渲染 =====
+function render() {
+  // 清空画布
+  ctx.fillStyle = '#0a1628';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  if (gameState !== 'playing') return;
+  
+  // 相机跟随
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+  
+  // 绘制天空渐变
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  if (weather === 'sunny') {
+    skyGradient.addColorStop(0, '#87CEEB');
+    skyGradient.addColorStop(0.5, '#4a90b8');
+    skyGradient.addColorStop(1, '#2d6a8f');
+  } else if (weather === 'cloudy') {
+    skyGradient.addColorStop(0, '#666');
+    skyGradient.addColorStop(0.5, '#888');
+    skyGradient.addColorStop(1, '#aaa');
+  } else if (weather === 'rainy') {
+    skyGradient.addColorStop(0, '#444');
+    skyGradient.addColorStop(0.5, '#666');
+    skyGradient.addColorStop(1, '#888');
+  } else {
+    skyGradient.addColorStop(0, '#222');
+    skyGradient.addColorStop(0.5, '#444');
+    skyGradient.addColorStop(1, '#666');
+  }
+  ctx.fillStyle = skyGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // 绘制云朵
+  for (const cloud of clouds) {
+    cloud.draw(ctx, camX, camY * 0.3);
+  }
+  
+  // 绘制海洋
+  ctx.fillStyle = weather === 'storm' ? '#1a3a5c' : '#2d6a8f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // 绘制海浪
+  for (const wave of waves) {
+    wave.draw(ctx, camX, camY);
+  }
+  
+  // 绘制岛屿
+  for (const island of islands) {
+    const screenX = island.x - camX;
+    const screenY = island.y - camY;
+    
+    if (screenX < -150 || screenX > canvas.width + 150 || 
+        screenY < -150 || screenY > canvas.height + 150) continue;
+    
+    // 岛屿阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(screenX, screenY + 10, island.radius, island.radius * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 岛屿主体
+    const islandGrad = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, island.radius);
+    islandGrad.addColorStop(0, '#228B22');
+    islandGrad.addColorStop(0.7, '#2d8a2d');
+    islandGrad.addColorStop(1, '#1a5c1a');
+    ctx.fillStyle = islandGrad;
+    ctx.beginPath();
+    ctx.ellipse(screenX, screenY, island.radius, island.radius * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 岛屿 Emoji
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(island.emoji, screenX, screenY);
+    
+    // 岛屿名称
+    if (!island.explored) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.fillText(island.type.name, screenX, screenY - island.radius - 20);
+    }
+  }
+  
+  // 绘制船只
+  for (const boat of boats) {
+    const screenX = boat.x - camX;
+    const screenY = boat.y - camY;
+    
+    if (screenX < -50 || screenX > canvas.width + 50 || 
+        screenY < -50 || screenY > canvas.height + 50) continue;
+    
+    // 船体
+    ctx.font = '35px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(boat.emoji, screenX, screenY);
+    
+    // 船名
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(boat.type.name, screenX, screenY - 25);
+  }
+  
+  // 绘制海洋生物
+  for (const creature of seaCreatures) {
+    const screenX = creature.x - camX;
+    const screenY = creature.y - camY;
+    
+    if (screenX < -30 || screenX > canvas.width + 30 || 
+        screenY < -30 || screenY > canvas.height + 30) continue;
+    
+    ctx.font = '25px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(creature.emoji, screenX, screenY);
+  }
+  
+  // 绘制怪物
+  for (const monster of monsters) {
+    const screenX = monster.x - camX;
+    const screenY = monster.y - camY;
+    
+    if (screenX < -50 || screenX > canvas.width + 50 || 
+        screenY < -50 || screenY > canvas.height + 50) continue;
+    
+    // 怪物光晕
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 20;
+    
+    ctx.font = '45px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(monster.emoji, screenX, screenY);
+    
+    ctx.shadowBlur = 0;
+    
+    // 血条
+    const barWidth = 60;
+    const barHeight = 6;
+    const barX = screenX - barWidth / 2;
+    const barY = screenY - 40;
+    
+    ctx.fillStyle = '#333';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    ctx.fillStyle = monster.health > monster.maxHealth * 0.5 ? '#00ff00' : '#ff0000';
+    ctx.fillRect(barX, barY, barWidth * (monster.health / monster.maxHealth), barHeight);
+    
+    // 怪物名称
+    ctx.fillStyle = '#ff4444';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(monster.type.name, screenX, screenY - 50);
+  }
+  
+  // 绘制宝箱
+  for (const treasure of treasures) {
+    if (treasure.opened) continue;
+    
+    const screenX = treasure.x - camX;
+    const screenY = treasure.y - camY;
+    
+    if (screenX < -30 || screenX > canvas.width + 30 || 
+        screenY < -30 || screenY > canvas.height + 30) continue;
+    
+    // 宝箱光效
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 15;
+    
+    ctx.font = '30px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(treasure.emoji, screenX, screenY);
+    
+    ctx.shadowBlur = 0;
+  }
+  
+  // 绘制玩家
+  const playerScreenX = player.x - camX;
+  const playerScreenY = player.y - camY;
+  
+  // 玩家光晕
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur = 10;
+  
+  // 玩家 Emoji
+  const playerEmojis = {
+    'up': '🧭',
+    'down': '🧭',
+    'left': '🧭',
+    'right': '🧭'
+  };
+  
+  ctx.font = '40px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(playerEmojis[player.facing], playerScreenX, playerScreenY);
+  
+  ctx.shadowBlur = 0;
+  
+  // 绘制粒子
+  for (const particle of particles) {
+    particle.draw(ctx, camX, camY);
+  }
+  
+  // 绘制钓鱼进度
+  if (fishing.active) {
+    const progress = fishing.timer / fishing.maxTime;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 50, 200, 20);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 50, 200 * progress, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('钓鱼中...', canvas.width / 2, canvas.height / 2 + 65);
+  }
+}
+
+function renderMinimap() {
+  if (!minimapCanvas.parentElement) return;
+  
+  const scaleX = minimapCanvas.width / WORLD_WIDTH;
+  const scaleY = minimapCanvas.height / WORLD_HEIGHT;
+  
+  minimapCtx.fillStyle = '#1a3a5c';
+  minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+  
+  // 绘制岛屿
+  minimapCtx.fillStyle = '#228B22';
+  for (const island of islands) {
+    minimapCtx.beginPath();
+    minimapCtx.arc(island.x * scaleX, island.y * scaleY, 3, 0, Math.PI * 2);
+    minimapCtx.fill();
+  }
+  
+  // 绘制怪物
+  minimapCtx.fillStyle = '#ff0000';
+  for (const monster of monsters) {
+    minimapCtx.beginPath();
+    minimapCtx.arc(monster.x * scaleX, monster.y * scaleY, 2, 0, Math.PI * 2);
+    minimapCtx.fill();
+  }
+  
+  // 绘制玩家
+  minimapCtx.fillStyle = '#ffd700';
+  minimapCtx.beginPath();
+  minimapCtx.arc(player.x * scaleX, player.y * scaleY, 4, 0, Math.PI * 2);
+  minimapCtx.fill();
+  
+  // 绘制视野范围
+  minimapCtx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+  minimapCtx.lineWidth = 1;
+  minimapCtx.strokeRect(
+    (player.x - canvas.width / 2) * scaleX,
+    (player.y - canvas.height / 2) * scaleY,
+    canvas.width * scaleX,
+    canvas.height * scaleY
+  );
+}
+
+// ===== 游戏流程 =====
+function showCharSelect() {
+  initAudio();
+  document.getElementById('mainMenu').style.display = 'none';
+  document.getElementById('charSelect').style.display = 'flex';
+}
+
+function selectChar(key) {
+  selectedChar = key;
+  document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.char-card[data-char="${key}"]`).classList.add('selected');
+  document.getElementById('startBtn').style.display = 'inline-block';
+}
+
+function backToMenu() {
+  document.getElementById('charSelect').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'flex';
+}
+
+function showHowToPlay() {
+  document.getElementById('mainMenu').style.display = 'none';
+  document.getElementById('howToPlay').style.display = 'flex';
+}
+
+function backFromHowToPlay() {
+  document.getElementById('howToPlay').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'flex';
+}
+
+function startGame() {
+  if (!selectedChar) return;
+  
+  document.getElementById('charSelect').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+  document.getElementById('inventory').style.display = 'block';
+  document.getElementById('controlsHint').style.display = 'block';
+  document.getElementById('weatherIndicator').style.display = 'block';
+  document.getElementById('questPanel').style.display = 'block';
+  
+  // 根据角色设置初始属性
+  switch(selectedChar) {
+    case 'navigator':
+      player.health = 80;
+      player.maxHealth = 80;
+      player.speed = 5.5;
+      break;
+    case 'warrior':
+      player.health = 150;
+      player.maxHealth = 150;
+      player.speed = 3.5;
+      break;
+    case 'fisherman':
+      player.health = 100;
+      player.maxHealth = 100;
+      player.speed = 4;
+      break;
+  }
+  
+  // 重置游戏状态
+  score = 0;
+  gold = 0;
+  gameTime = 0;
+  weather = 'sunny';
+  weatherTimer = 0;
+  fishing = { active: false, timer: 0, maxTime: 3, success: false, catch: null };
+  particles = [];
+  
+  initWorld();
+  gameState = 'playing';
+  
+  // 初始化物品栏
+  updateInventory();
+  
+  // 初始化任务
+  updateQuests();
+  
+  // 显示移动端控制
+  if ('ontouchstart' in window) {
+    document.getElementById('mobileControls').style.display = 'flex';
+  }
+}
+
+function pauseGame() {
+  if (gameState !== 'playing') return;
+  gameState = 'paused';
+  document.getElementById('pauseOverlay').style.display = 'flex';
+}
+
+function resumeGame() {
+  if (gameState !== 'paused') return;
+  gameState = 'playing';
+  document.getElementById('pauseOverlay').style.display = 'none';
+}
+
+function quitToMenu() {
+  gameState = 'menu';
+  document.getElementById('pauseOverlay').style.display = 'none';
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('inventory').style.display = 'none';
+  document.getElementById('controlsHint').style.display = 'none';
+  document.getElementById('weatherIndicator').style.display = 'none';
+  document.getElementById('questPanel').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'flex';
+  document.getElementById('mobileControls').style.display = 'none';
+  
+  enemies = [];
+  bullets = [];
+  enemyBullets = [];
+  powerups = [];
+  particles = [];
+  boss = null;
+}
+
+function gameOver() {
+  gameState = 'gameover';
+  spawnParticles(player.x, player.y, '#ff0044', 50, 8, 1.5);
+  spawnParticles(player.x, player.y, '#ffaa00', 30, 6, 1.2);
+  playSound('monster');
+  
+  showMessage(`游戏结束! 得分: ${score} 金币: ${gold}`);
+}
+
+function useSkill(skill) {
+  switch(skill) {
+    case 'attack':
+      // 攻击附近怪物
+      for (const monster of monsters) {
+        const dx = player.x - monster.x;
+        const dy = player.y - monster.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 100) {
+          const damage = player.weapon === 'sword' ? 20 : 35;
+          monster.health -= damage;
+          playSound(player.weapon === 'sword' ? 'sword' : 'gun');
+          spawnParticles(monster.x, monster.y, '#ff4444', 15, 4, 0.6);
+          
+          if (monster.health <= 0) {
+            gold += monster.value;
+            score += monster.value;
+            playSound('monster');
+            spawnParticles(monster.x, monster.y, '#ffd700', 30, 6, 1.2);
+            showMessage(`击败 ${monster.type.name}! +${monster.value} 金币`);
+            monsters.splice(monsters.indexOf(monster), 1);
+          }
+          break;
+        }
+      }
+      break;
+    case 'defend':
+      player.health = Math.min(player.maxHealth, player.health + 10);
+      showMessage('防御姿态! +10 HP');
+      break;
+    case 'speed':
+      player.speed *= 1.5;
+      setTimeout(() => { player.speed /= 1.5; }, 5000);
+      showMessage('加速! 5秒内速度提升');
+      break;
+    case 'heal':
+      player.health = Math.min(player.maxHealth, player.health + 30);
+      showMessage('治疗! +30 HP');
+      break;
+  }
+}
+
+// ===== HUD 更新 =====
+function updateHUD() {
+  document.getElementById('goldDisplay').textContent = `💰 ${gold}`;
+  document.getElementById('healthFill').style.width = (player.health / player.maxHealth * 100) + '%';
+  
+  // 更新位置显示
+  let location = '🌊 开阔海域';
+  for (const island of islands) {
+    const dx = player.x - island.x;
+    const dy = player.y - island.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < island.radius + 100) {
+      location = `🏝️ ${island.type.name}`;
+      break;
+    }
+  }
+  
+  if (player.onBoat) {
+    location = '🚢 船上';
+  }
+  
+  document.getElementById('locationDisplay').textContent = location;
+}
+
+function updateWeatherIndicator() {
+  const indicators = {
+    'sunny': '☀️',
+    'cloudy': '☁️',
+    'rainy': '🌧️',
+    'storm': '⛈️'
+  };
+  document.getElementById('weatherIndicator').textContent = indicators[weather] || '☀️';
+}
+
+function updateInventory() {
+  const slots = document.getElementById('invSlots');
+  slots.innerHTML = '';
+  
+  const items = [
+    { emoji: '🗡️', name: '刀', count: player.weapon === 'sword' ? 1 : 0 },
+    { emoji: '🔫', name: '枪', count: player.weapon === 'gun' ? 1 : 0 },
+    { emoji: '🎣', name: '钓竿', count: 1 },
+    { emoji: '💰', name: '金币', count: gold },
+    { emoji: '❤️', name: '生命', count: Math.floor(player.health) }
+  ];
+  
+  for (const item of items) {
+    const slot = document.createElement('div');
+    slot.className = 'inv-slot';
+    slot.innerHTML = `${item.emoji}<span class="count">${item.count}</span>`;
+    slot.title = item.name;
+    slots.appendChild(slot);
+  }
+}
+
+function updateQuests() {
+  const quests = [
+    { text: '击败 5 个怪物', completed: false },
+    { text: '钓到 10 条鱼', completed: false },
+    { text: '探索 3 个岛屿', completed: false },
+    { text: '收集 500 金币', completed: gold >= 500 }
+  ];
+  
+  const list = document.getElementById('questList');
+  list.innerHTML = '';
+  
+  for (const quest of quests) {
+    const item = document.createElement('div');
+    item.className = 'quest-item' + (quest.completed ? ' completed' : '');
+    item.textContent = quest.text;
+    list.appendChild(item);
+  }
+}
+
+function showMessage(text) {
+  const box = document.getElementById('messageBox');
+  box.textContent = text;
+  box.style.display = 'block';
+  
+  setTimeout(() => {
+    box.style.display = 'none';
+  }, 2000);
+}
+
+// ===== 主循环 =====
+let lastTime = 0;
+
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+  
+  if (gameState === 'playing') {
+    gameTime += dt;
+    
+    // 更新
+    updatePlayer(dt);
+    updateSeaCreatures(dt);
+    updateMonsters(dt);
+    updateBoats(dt);
+    updateFishing(dt);
+    
+    // 更新粒子
+    for (let i = particles.length - 1; i >= 0; i--) {
+      particles[i].update(dt);
+      if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+    
+    // 更新海浪
+    for (const wave of waves) wave.update(dt);
+    
+    // 更新云朵
+    for (const cloud of clouds) cloud.update(dt);
+    
+    // 更新 HUD
+    updateHUD();
+    updateInventory();
+    updateQuests();
+  }
+  
+  // 渲染
+  render();
+  renderMinimap();
+  
+  requestAnimationFrame(gameLoop);
+}
+
+// ===== 初始化 =====
+requestAnimationFrame(gameLoop);
+
+// 检测移动端
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  const mc = document.getElementById('mobileControls');
+  if (mc) mc.style.display = 'flex';
+}
+
+// ===== 移动端触屏控制 =====
+(function initMobileControls() {
+  const joystickArea = document.getElementById('joystickArea');
+  const joystickBase = document.getElementById('joystickBase');
+  const joystickThumb = document.getElementById('joystickThumb');
+  const btnAttack = document.getElementById('btnAttack');
+  const btnFish = document.getElementById('btnFish');
+  const btnInteract = document.getElementById('btnInteract');
+  const btnWeapon = document.getElementById('btnWeapon');
+  const btnPause = document.getElementById('btnPause');
+  
+  if (!joystickArea) return; // Not mobile
+  
+  const baseRect = () => joystickBase.getBoundingClientRect();
+  const cx = 75, cy = 75; // center of joystick
+  let touchId = null;
+  
+  function moveThumb(dx, dy) {
+    const maxR = 45;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const r = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    const tx = Math.cos(angle) * r;
+    const ty = Math.sin(angle) * r;
+    joystickThumb.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+    
+    // Normalize to -1..1
+    const nx = dx > maxR ? 1 : dx < -maxR ? -1 : dx / maxR;
+    const ny = dy > maxR ? 1 : dy < -maxR ? -1 : dy / maxR;
+    input.keys['ArrowLeft'] = nx < -0.3;
+    input.keys['ArrowRight'] = nx > 0.3;
+    input.keys['ArrowUp'] = ny < -0.3;
+    input.keys['ArrowDown'] = ny > 0.3;
+  }
+  
+  joystickArea.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    touchId = t.identifier;
+    const rect = baseRect();
+    const dx = t.clientX - rect.left - cx;
+    const dy = t.clientY - rect.top - cy;
+    moveThumb(dx, dy);
+  }, { passive: false });
+  
+  joystickArea.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchId) {
+        const rect = baseRect();
+        const dx = t.clientX - rect.left - cx;
+        const dy = t.clientY - rect.top - cy;
+        moveThumb(dx, dy);
+      }
+    }
+  }, { passive: false });
+  
+  joystickArea.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchId) {
+        touchId = null;
+        joystickThumb.style.transform = 'translate(-50%, -50%)';
+        input.keys['ArrowLeft'] = false;
+        input.keys['ArrowRight'] = false;
+        input.keys['ArrowUp'] = false;
+        input.keys['ArrowDown'] = false;
+      }
+    }
+  });
+  
+  function addTouchHold(btn, key) {
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.keys[key] = true; btn.classList.add('active'); });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); input.keys[key] = false; btn.classList.remove('active'); });
+  }
+  
+  addTouchHold(btnAttack, ' ');    // Space = attack
+  addTouchHold(btnFish, 'f');      // F = fish
+  addTouchHold(btnInteract, 'e');  // E = interact
+  addTouchHold(btnWeapon, 'q');    // Q = switch weapon
+  
+  btnPause.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (gameState === 'playing') gameState = 'paused';
+    else if (gameState === 'paused') gameState = 'playing';
+  });
+})();
+
+</script>
+
+<!-- 移动端触屏控制 -->
+<div id="mobileControls">
+  <div id="mobileInfo">触屏模式</div>
+  <button class="action-btn" id="btnPause">⏸</button>
+  <div id="joystickArea">
+    <div id="joystickBase">
+      <div id="joystickThumb"></div>
+    </div>
+  </div>
+  <button class="action-btn" id="btnAttack">⚔</button>
+  <button class="action-btn" id="btnFish">🎣</button>
+  <button class="action-btn" id="btnInteract">E</button>
+  <button class="action-btn" id="btnWeapon">Q</button>
+</div>
+
+</body>
+</html>
